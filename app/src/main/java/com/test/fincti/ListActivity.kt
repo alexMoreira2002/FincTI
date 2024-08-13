@@ -25,6 +25,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class ListActivity : AppCompatActivity() {
+    // UI Elements
     private lateinit var recyclerView: RecyclerView
     private lateinit var typeLayout: TextInputLayout
     private lateinit var categoryLayout: TextInputLayout
@@ -42,6 +43,7 @@ class ListActivity : AppCompatActivity() {
     private lateinit var navView: NavigationView
     private lateinit var drawerLayout: DrawerLayout
 
+    // Dropdown options for type and category
     val types = arrayOf("Expense", "Income")
     val categories = arrayOf(
         "Food",
@@ -57,8 +59,10 @@ class ListActivity : AppCompatActivity() {
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_list)
+        enableEdgeToEdge() // Enable edge-to-edge display mode
+        setContentView(R.layout.activity_list) // Set the layout for this activity
+
+        // Initialize UI elements
         typeInput = findViewById(R.id.typeInput)
         categoryInput = findViewById(R.id.categoryInput)
         typeLayout = findViewById(R.id.typeLayout)
@@ -71,34 +75,38 @@ class ListActivity : AppCompatActivity() {
         navView = findViewById(R.id.nav_view)
         drawerLayout = findViewById(R.id.drawerLayout)
 
-        val typeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, types)
-        val categoryAdapter =
-            ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, categories)
+        // Set up adapters for the dropdown fields
+        val typeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, types)
+        val categoryAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categories)
 
         typeInput.setAdapter(typeAdapter)
         categoryInput.setAdapter(categoryAdapter)
 
+        // Set up item click listeners for the dropdown fields
         typeInput.setOnItemClickListener { _, _, position, _ ->
             currentTypeFilter = position.toString()
-            fetchAll()
+            fetchAll() // Fetch transactions based on the selected type
         }
 
         categoryInput.setOnItemClickListener { _, _, position, _ ->
             currentCategoryFilter = position.toString()
-            fetchAll()
+            fetchAll() // Fetch transactions based on the selected category
         }
 
+        // Initialize the Room database
         db = Room.databaseBuilder(
             this,
             AppDatabase::class.java,
             "transactions"
         ).build()
 
+        // Set up the RecyclerView
         recyclerView.apply {
             adapter = transactionAdapter
             layoutManager = linearlayoutManager
         }
 
+        // Set up swipe-to-delete functionality
         val itemTouchHelper = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -111,30 +119,32 @@ class ListActivity : AppCompatActivity() {
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 deleteTransaction(transactions[viewHolder.adapterPosition])
             }
-
         }
 
+        // Attach ItemTouchHelper to RecyclerView
         val swipeHelper = ItemTouchHelper(itemTouchHelper)
         swipeHelper.attachToRecyclerView(recyclerView)
+
+        // Set up the toolbar and navigation drawer
         setSupportActionBar(toolBar)
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    // Handle home button click
+                    // Navigate to the Home activity
                     val intent = Intent(this, MainActivity::class.java)
                     startActivity(intent)
                     true
                 }
 
                 R.id.nav_add -> {
-                    // Handle list button click
+                    // Navigate to the Add Transaction activity
                     val intent = Intent(this, AddTransactionActivity::class.java)
                     startActivity(intent)
                     true
                 }
 
                 R.id.nav_list -> {
-                    // Handle list button click
+                    // Navigate to the List activity
                     val intent = Intent(this, ListActivity::class.java)
                     startActivity(intent)
                     true
@@ -144,6 +154,7 @@ class ListActivity : AppCompatActivity() {
             false
         }
 
+        // Set up the DrawerToggle for the navigation drawer
         val actionBarDrawerToggle = ActionBarDrawerToggle(
             this,
             drawerLayout,
@@ -155,25 +166,32 @@ class ListActivity : AppCompatActivity() {
         actionBarDrawerToggle.syncState()
     }
 
+    // Fetch transactions from the database based on filters
     private fun fetchAll() {
         GlobalScope.launch {
-            val transactions = if (currentTypeFilter != null && currentCategoryFilter != null) {
-                db.transactionDao()
-                    .getAllByTypeAndCategory(currentTypeFilter!!, currentCategoryFilter!!)
-            } else if (currentTypeFilter != null) {
-                db.transactionDao().getAllByType(currentTypeFilter!!)
-            } else if (currentCategoryFilter != null) {
-                db.transactionDao().getAllByCategory(currentCategoryFilter!!)
-            } else {
-                db.transactionDao().getAll()
+            val transactions = when {
+                currentTypeFilter != null && currentCategoryFilter != null -> {
+                    db.transactionDao().getAllByTypeAndCategory(currentTypeFilter!!, currentCategoryFilter!!)
+                }
+                currentTypeFilter != null -> {
+                    db.transactionDao().getAllByType(currentTypeFilter!!)
+                }
+                currentCategoryFilter != null -> {
+                    db.transactionDao().getAllByCategory(currentCategoryFilter!!)
+                }
+                else -> {
+                    db.transactionDao().getAll()
+                }
             }
 
+            // Update the RecyclerView adapter with fetched data
             runOnUiThread {
                 transactionAdapter.setData(transactions)
             }
         }
     }
 
+    // Delete a transaction from the database and update the RecyclerView
     private fun deleteTransaction(transaction: Transaction) {
         deletedTransaction = transaction
         oldTransactions = transactions
@@ -184,11 +202,12 @@ class ListActivity : AppCompatActivity() {
             transactions = transactions.filter { it.id != transaction.id }
             runOnUiThread {
                 transactionAdapter.setData(transactions)
-                showSnackbar()
+                showSnackbar() // Show a Snackbar with an undo option
             }
         }
     }
 
+    // Undo the deletion of a transaction
     private fun undoDelete() {
         GlobalScope.launch {
             db.transactionDao().insertAll(deletedTransaction)
@@ -201,6 +220,7 @@ class ListActivity : AppCompatActivity() {
         }
     }
 
+    // Show a Snackbar with an undo option
     private fun showSnackbar() {
         val view = findViewById<View>(R.id.coordinator)
         val snackbar = Snackbar.make(view, "Transaction deleted!", Snackbar.LENGTH_LONG)
@@ -212,6 +232,7 @@ class ListActivity : AppCompatActivity() {
             .show()
     }
 
+    // Fetch transactions when the activity resumes
     override fun onResume() {
         super.onResume()
         fetchAll()

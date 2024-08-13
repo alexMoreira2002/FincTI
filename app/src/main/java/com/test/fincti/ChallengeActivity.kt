@@ -22,6 +22,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class ChallengeActivity : AppCompatActivity() {
+    // UI Elements
     private lateinit var challengeBtn: Button
     private lateinit var closeBtn: AppCompatImageButton
     private lateinit var incrementInput: TextInputEditText
@@ -33,9 +34,10 @@ class ChallengeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_challenge)
+        enableEdgeToEdge() // Enables edge-to-edge display mode
+        setContentView(R.layout.activity_challenge) // Set the layout for this activity
 
+        // Initialize UI elements
         incrementLayout = findViewById(R.id.incrementLayout)
         challengeBtn = findViewById(R.id.challengeBtn)
         closeBtn = findViewById(R.id.closeBtn)
@@ -45,50 +47,56 @@ class ChallengeActivity : AppCompatActivity() {
         navView = findViewById(R.id.nav_view)
         drawerLayout = findViewById(R.id.drawerLayout)
 
-
+        // Add a text change listener to clear error message when input is not empty
         incrementInput.addTextChangedListener {
             if (it!!.isNotEmpty())
                 incrementLayout.error = null
         }
 
+        // Handle challenge button click
         challengeBtn.setOnClickListener {
             val increment = incrementInput.text.toString()
 
-            if (increment.isEmpty())
+            if (increment.isEmpty()) {
                 incrementLayout.error = "Please enter a valid increment amount"
-            else {
+            } else {
                 val incrementValue = increment.toIntOrNull()
 
                 if (incrementValue == null) {
                     incrementLayout.error = "Please enter a valid increment amount"
                     return@setOnClickListener
                 }
-                var totalChallenge : Int = 0
+
+                // Calculate the total amount saved over 52 weeks
+                var totalChallenge: Int = 0
                 var count = 0
                 do {
-                    totalChallenge += incrementValue*count
+                    totalChallenge += incrementValue * count
                     count++
                 } while (count <= 52)
 
+                // Show the result in an alert dialog
                 val alertDialog = AlertDialog.Builder(this)
-                alertDialog.setTitle("52 Week challenge")
+                alertDialog.setTitle("52 Week Challenge")
                 alertDialog.setMessage("You would save a total of $$totalChallenge")
                 alertDialog.setNeutralButton("OK") { _, _ -> }
                 alertDialog.show()
             }
         }
 
+        // Handle close button click
         closeBtn.setOnClickListener {
-            finish()
+            finish() // Close the activity
         }
 
+        // Hide keyboard when clicking outside of input fields
         rootView.setOnClickListener {
             this.window.decorView.clearFocus()
-
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(it.windowToken, 0)
         }
 
+        // Set up the toolbar and navigation drawer
         setSupportActionBar(toolBar)
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
@@ -100,7 +108,7 @@ class ChallengeActivity : AppCompatActivity() {
                 }
 
                 R.id.nav_add -> {
-                    // Handle list button click
+                    // Handle add button click
                     val intent = Intent(this, AddTransactionActivity::class.java)
                     startActivity(intent)
                     true
@@ -112,8 +120,9 @@ class ChallengeActivity : AppCompatActivity() {
                     startActivity(intent)
                     true
                 }
+
                 R.id.nav_challenge -> {
-                    // Handle list button click
+                    // Handle challenge button click
                     val intent = Intent(this, ChallengeActivity::class.java)
                     startActivity(intent)
                     true
@@ -123,6 +132,7 @@ class ChallengeActivity : AppCompatActivity() {
             false
         }
 
+        // Set up the drawer toggle
         val actionBarDrawerToggle = ActionBarDrawerToggle(
             this,
             drawerLayout,
@@ -134,6 +144,7 @@ class ChallengeActivity : AppCompatActivity() {
         actionBarDrawerToggle.syncState()
     }
 
+    // Function to insert a transaction into the database (not used in this activity, but included for completeness)
     private fun insert(transaction: Transaction) {
         val db = Room.databaseBuilder(
             this,
@@ -143,7 +154,7 @@ class ChallengeActivity : AppCompatActivity() {
 
         GlobalScope.launch {
             db.transactionDao().insertAll(transaction)
-            finish()
+            finish() // Close the activity after inserting the transaction
         }
     }
 }

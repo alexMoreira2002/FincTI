@@ -1,4 +1,5 @@
 package com.test.fincti
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -32,8 +33,8 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 
-
 class DetailedActivity : AppCompatActivity() {
+    // UI Elements
     private lateinit var transaction: Transaction
     private lateinit var closeBtn: ImageButton
     private lateinit var labelInput: TextInputEditText
@@ -52,29 +53,23 @@ class DetailedActivity : AppCompatActivity() {
     private lateinit var navView: NavigationView
     private lateinit var drawerLayout: DrawerLayout
     private var typePosition: String = "0"
-    private var categoryPosition: String ="0"
+    private var categoryPosition: String = "0"
     private lateinit var imageView: ImageView
 
-
+    // Arrays for dropdown options
     val types = arrayOf("Expense", "Income")
     val categories = arrayOf(
-        "Food",
-        "Rent",
-        "Transportation",
-        "Entertainment",
-        "Salary",
-        "Groceries",
-        "Bill",
-        "Maintenance",
-        "Others"
+        "Food", "Rent", "Transportation", "Entertainment",
+        "Salary", "Groceries", "Bill", "Maintenance", "Others"
     )
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_detailed)
-        // Initialize views
+        enableEdgeToEdge() // Enables edge-to-edge display mode
+        setContentView(R.layout.activity_detailed) // Set the layout for this activity
+
+        // Initialize UI elements
         closeBtn = findViewById(R.id.closeBtn)
         labelInput = findViewById(R.id.labelInput)
         amountInput = findViewById(R.id.amountInput)
@@ -93,19 +88,21 @@ class DetailedActivity : AppCompatActivity() {
         drawerLayout = findViewById(R.id.drawerLayout)
         imageView = findViewById(R.id.imageView)
 
+        // Retrieve the transaction object from the Intent
         transaction = intent.getSerializableExtra("transaction") as Transaction
 
+        // Populate fields with transaction data
         labelInput.setText(transaction.label)
         amountInput.setText(transaction.amount.toString())
         descriptionInput.setText(transaction.description)
 
+        // Set the initial values for type and category based on transaction data
         when (transaction.type) {
             "0" -> typeInput.setText(types[0])
             "1" -> typeInput.setText(types[1])
             else -> typeInput.setText("") // Default case if type is invalid
         }
 
-        // Use 'when' to set the initial text based on the category
         when (transaction.category) {
             "0" -> categoryInput.setText(categories[0])
             "1" -> categoryInput.setText(categories[1])
@@ -119,6 +116,7 @@ class DetailedActivity : AppCompatActivity() {
             else -> categoryInput.setText("") // Default case if category is invalid
         }
 
+        // Set positions based on type and category
         typePosition = when (transaction.type) {
             "0" -> "0"
             "1" -> "1"
@@ -138,30 +136,34 @@ class DetailedActivity : AppCompatActivity() {
             else -> ""
         }
 
-        val typeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, types)
-        val categoryAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, categories)
+        // Set up adapters for type and category dropdowns
+        val typeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, types)
+        val categoryAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categories)
 
         typeInput.setAdapter(typeAdapter)
         categoryInput.setAdapter(categoryAdapter)
 
+        // Load and display the photo if available
         if (transaction.photo != null) {
             val byteArray = transaction.photo
             val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray!!.size)
             imageView.setImageBitmap(bitmap)
         }
 
+        // Open gallery to pick a new photo
         imageView.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             startActivityForResult(intent, 1)
         }
 
+        // Hide keyboard when clicking outside of input fields
         rootView.setOnClickListener {
             this.window.decorView.clearFocus()
-
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(it.windowToken, 0)
         }
 
+        // Update button visibility logic
         labelInput.addTextChangedListener {
             updateBtn.visibility = View.VISIBLE
             if (it!!.count() > 0) labelLayout.error = null
@@ -176,14 +178,15 @@ class DetailedActivity : AppCompatActivity() {
             updateBtn.visibility = View.VISIBLE
         }
 
-        typeInput.addTextChangedListener{
+        typeInput.addTextChangedListener {
             updateBtn.visibility = View.VISIBLE
         }
 
-        categoryInput.addTextChangedListener{
+        categoryInput.addTextChangedListener {
             updateBtn.visibility = View.VISIBLE
         }
 
+        // Set listeners for type and category selection
         typeInput.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             typePosition = position.toString()
         }
@@ -192,6 +195,7 @@ class DetailedActivity : AppCompatActivity() {
             categoryPosition = position.toString()
         }
 
+        // Handle update button click
         updateBtn.setOnClickListener {
             val label = labelInput.text.toString()
             val description = descriptionInput.text.toString()
@@ -199,27 +203,32 @@ class DetailedActivity : AppCompatActivity() {
             if (label.isEmpty()) labelLayout.error = "Please enter a valid label"
             else if (amount == null) amountLayout.error = "Please enter a valid amount"
             else {
+                // Convert image to byte array
                 val bitmap = (imageView.drawable as BitmapDrawable).bitmap
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
                 val photoByteArray = byteArrayOutputStream.toByteArray()
 
-                val transaction = Transaction(transaction.id, label, amount, description, typePosition, categoryPosition, photoByteArray)
+                // Create a new transaction object with updated data
+                val updatedTransaction = Transaction(transaction.id, label, amount, description, typePosition, categoryPosition, photoByteArray)
                 GlobalScope.launch {
                     val db = Room.databaseBuilder(
                         this@DetailedActivity, AppDatabase::class.java, "transactions"
                     ).build()
-                    db.transactionDao().update(transaction)
+                    db.transactionDao().update(updatedTransaction)
                     finish()
                 }
             }
         }
+
+        // Handle delete button click
         deleteBtn.setOnClickListener {
             val transactionId = transaction.id
             val db = Room.databaseBuilder(
                 this, AppDatabase::class.java, "transactions"
             ).build()
 
+            // Show confirmation dialog before deletion
             val alertDialog = AlertDialog.Builder(this)
             alertDialog.setTitle("Delete Transaction")
             alertDialog.setMessage("Are you sure you want to delete this transaction?")
@@ -233,10 +242,12 @@ class DetailedActivity : AppCompatActivity() {
             alertDialog.show()
         }
 
+        // Handle close button click
         closeBtn.setOnClickListener {
-            finish()
+            finish() // Close the activity
         }
 
+        // Set up toolbar and navigation drawer
         setSupportActionBar(toolBar)
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
@@ -248,7 +259,7 @@ class DetailedActivity : AppCompatActivity() {
                 }
 
                 R.id.nav_add -> {
-                    // Handle list button click
+                    // Handle add button click
                     val intent = Intent(this, AddTransactionActivity::class.java)
                     startActivity(intent)
                     true
@@ -262,7 +273,7 @@ class DetailedActivity : AppCompatActivity() {
                 }
 
                 R.id.nav_challenge -> {
-                    // Handle list button click
+                    // Handle challenge button click
                     val intent = Intent(this, ChallengeActivity::class.java)
                     startActivity(intent)
                     true
@@ -272,6 +283,7 @@ class DetailedActivity : AppCompatActivity() {
             false
         }
 
+        // Set up the drawer toggle
         val actionBarDrawerToggle = ActionBarDrawerToggle(
             this,
             drawerLayout,
@@ -283,6 +295,7 @@ class DetailedActivity : AppCompatActivity() {
         actionBarDrawerToggle.syncState()
     }
 
+    // Function to update a transaction in the database (not used in this activity, but included for completeness)
     private fun update(transaction: Transaction) {
         val db = Room.databaseBuilder(
             this, AppDatabase::class.java, "transactions"
@@ -290,7 +303,7 @@ class DetailedActivity : AppCompatActivity() {
 
         GlobalScope.launch {
             db.transactionDao().update(transaction)
-            finish()
+            finish() // Close the activity after updating the transaction
         }
     }
 }

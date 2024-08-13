@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 
 class AddTransactionActivity : AppCompatActivity() {
+    // UI Elements
     private lateinit var addTransactionBtn: Button
     private lateinit var closeBtn: AppCompatImageButton
     private lateinit var labelInput: TextInputEditText
@@ -52,10 +53,13 @@ class AddTransactionActivity : AppCompatActivity() {
     private lateinit var navView: NavigationView
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var imageView: ImageView
+
+    // Variables for storing selected positions and image data
     private var typePosition: String = "0"
     private var categoryPosition: String = "0"
     private var photoByteArray: ByteArray? = null
 
+    // Arrays for types and categories
     val types = arrayOf("Expense", "Income")
     val categories = arrayOf(
         "Food",
@@ -73,7 +77,7 @@ class AddTransactionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_transaction)
 
-
+        // Initialize UI elements
         labelLayout = findViewById(R.id.labelLayout)
         amountLayout = findViewById(R.id.amountLayout)
         descriptionLayout = findViewById(R.id.descriptionLayout)
@@ -92,38 +96,42 @@ class AddTransactionActivity : AppCompatActivity() {
         drawerLayout = findViewById(R.id.drawerLayout)
         imageView = findViewById(R.id.imageView)
 
+        // Set up adapters for type and category inputs
         val typeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, types)
-        val categoryAdapter =
-            ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, categories)
+        val categoryAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, categories)
 
         typeInput.setAdapter(typeAdapter)
         categoryInput.setAdapter(categoryAdapter)
 
-        typeInput.onItemClickListener =
-            AdapterView.OnItemClickListener { parent, view, position, id ->
-                typePosition = position.toString()
-            }
+        // Handle type selection
+        typeInput.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+            typePosition = position.toString()
+        }
 
-        categoryInput.onItemClickListener =
-            AdapterView.OnItemClickListener { parent, view, position, id ->
-                categoryPosition = position.toString()
-            }
+        // Handle category selection
+        categoryInput.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+            categoryPosition = position.toString()
+        }
 
+        // Clear error message when label input is not empty
         labelInput.addTextChangedListener {
             if (it!!.isNotEmpty())
                 labelLayout.error = null
         }
 
+        // Clear error message when amount input is not empty
         amountInput.addTextChangedListener {
             if (it!!.isNotEmpty())
                 amountLayout.error = null
         }
 
+        // Handle image selection from gallery
         imageView.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             startActivityForResult(intent, 1)
         }
 
+        // Handle add transaction button click
         addTransactionBtn.setOnClickListener {
             val label = labelInput.text.toString()
             val amount = amountInput.text.toString().toDoubleOrNull()
@@ -131,14 +139,15 @@ class AddTransactionActivity : AppCompatActivity() {
             val type = typePosition
             val category = categoryPosition
 
+            // Validate inputs
             if (label.isEmpty()) {
                 labelLayout.error = "Please enter a valid label"
             } else if (amount == null) {
                 amountLayout.error = "Please enter a valid amount"
             } else if (photoByteArray == null) {
-                // Show an error message if no photo is selected
                 Toast.makeText(this, "Please select a photo", Toast.LENGTH_SHORT).show()
             } else {
+                // Create a new transaction object
                 val transaction = Transaction(
                     0,
                     label,
@@ -149,6 +158,7 @@ class AddTransactionActivity : AppCompatActivity() {
                     photoByteArray!!
                 )
 
+                // Insert transaction into database asynchronously
                 GlobalScope.launch {
                     val db = Room.databaseBuilder(
                         this@AddTransactionActivity,
@@ -156,56 +166,56 @@ class AddTransactionActivity : AppCompatActivity() {
                         "transactions"
                     ).build()
                     db.transactionDao().insertAll(transaction)
-                    finish()
+                    finish() // Close the activity after saving
                 }
             }
         }
 
+        // Handle close button click
         closeBtn.setOnClickListener {
-            finish()
+            finish() // Close the activity
         }
 
+        // Hide keyboard when clicking outside of input fields
         rootView.setOnClickListener {
             this.window.decorView.clearFocus()
-
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(it.windowToken, 0)
         }
+
+        // Set up the toolbar and navigation drawer
         setSupportActionBar(toolBar)
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    // Handle home button click
                     val intent = Intent(this, MainActivity::class.java)
                     startActivity(intent)
                     true
                 }
 
                 R.id.nav_add -> {
-                    // Handle list button click
                     val intent = Intent(this, AddTransactionActivity::class.java)
                     startActivity(intent)
                     true
                 }
 
                 R.id.nav_list -> {
-                    // Handle list button click
                     val intent = Intent(this, ListActivity::class.java)
                     startActivity(intent)
                     true
                 }
 
                 R.id.nav_challenge -> {
-                    // Handle list button click
                     val intent = Intent(this, ChallengeActivity::class.java)
                     startActivity(intent)
                     true
                 }
-                // Add more menu item handlers as needed
+                // Handle other menu items as needed
             }
             false
         }
 
+        // Set up the drawer toggle
         val actionBarDrawerToggle = ActionBarDrawerToggle(
             this,
             drawerLayout,
@@ -217,6 +227,7 @@ class AddTransactionActivity : AppCompatActivity() {
         actionBarDrawerToggle.syncState()
     }
 
+    // Handle image selection result
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
@@ -229,6 +240,7 @@ class AddTransactionActivity : AppCompatActivity() {
         }
     }
 
+    // Insert a transaction into the database
     private fun insert(transaction: Transaction) {
         val db = Room.databaseBuilder(
             this,
